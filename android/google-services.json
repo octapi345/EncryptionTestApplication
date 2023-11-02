@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "893923649022",
+    "project_id": "standardized-payment-encrypt",
+    "storage_bucket": "standardized-payment-encrypt.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:893923649022:android:5b086703888e79f47eccaf",
+        "android_client_info": {
+          "package_name": "com.cs4308.standardized"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCxH3S_oA1Cn7ANe5FIHayG0Qad_utNM2o"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
