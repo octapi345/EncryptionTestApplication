@@ -1,12 +1,15 @@
 import 'dart:convert';
 
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cryptography/cryptography.dart';
 import 'package:encryptiontestapplication/CreditCardDetails.dart';
 import 'package:encryptiontestapplication/CreditCard.dart';
+import 'package:encryptiontestapplication/DBMS.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:sqflite/sqflite.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 Future main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -19,11 +22,16 @@ Future main() async {
       projectId: "standardized-payment-encrypt",
     ),
   );
+  sqfliteFfiInit();
+  databaseFactory = databaseFactoryFfi;
+  DatabaseManager.init();
   runApp(MyApp());
 }
 
 CreditCardDetails card1 =
     CreditCardDetails('0000-0000-0000-0000', '00-00-0000', 'Reginald Appiah', '123');
+
+final userReference = FirebaseFirestore.instance.collection('users');
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
@@ -74,6 +82,7 @@ class _MyHomePageState extends State<MyHomePage> {
     UserCredential anonUser = await FirebaseAuth.instance.signInAnonymously();
     print(anonUser.user!.uid);
     print(FirebaseAuth.instance.currentUser!.uid);
+    userReference.add(card1.toJson());
     setState(() {});
   }
 
