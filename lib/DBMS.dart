@@ -26,9 +26,6 @@ Future main() async {
   Timer.periodic(Duration(minutes: 60), (Timer t) {
     DatabaseManager.updateKeys();
   });
-  var stream = FirebaseFirestore.instance.collection('users').doc("LnaCNrez4NZJXfIgcGkcGuyHjUz1").collection('requests').snapshots();
-  stream.listen((event) => DatabaseManager.receive(event), onError: (error) => print("error"));
-
   runApp(MyApp());
 }
 
@@ -39,22 +36,48 @@ class DatabaseManager {
 
   static Future<void> init() async{
     db = await openDatabase('EncryptedData.db', version: 1, onCreate: _onCreate);
+    var stream = FirebaseFirestore.instance.collection('users').doc("LnaCNrez4NZJXfIgcGkcGuyHjUz1").collection('requests').snapshots();
+    stream.listen((event) => DatabaseManager.receive(event), onError: (error) => print("error"));
     /*
     await db.execute("INSERT INTO CardData VALUES (123456789, '11/11/2026', 'Dillon Horton', 123)");*/
     print(db.path);
 
   }
- // static Future<SecretKey> getKey(int id) async{
-  //  var data = await db.query("EncryptionKeys", columns: ['KeyValue'], where:'KeyID = $id');
 
- // }
   static Future receive(QuerySnapshot<Map<String, dynamic>> data) async{
     for (DocumentSnapshot card in data.docs){
-      CreditCardDetails details = CreditCardDetails(card.get('cardNumber'), card.get('expiryDate'), card.get('cardHolderName'), card.get('cvvCode'));
+      try {
+        CreditCardDetails details = CreditCardDetails(
+            card.get('cardNumber'), card.get('expiryDate'),
+            card.get('cardHolderName'), card.get('cvvCode'));
+        addCard(details);
+      } on Exception catch(e){
+        print("$e");
+      }
       //add to database
       //print(card.get('cardHolderName'));
     }
   }
+
+  static Future addCard(CreditCardDetails cardDetails) async{
+    List<Map<String, dynamic>> exists = await db.query('CardData',
+        where: 'cardNumber = ?', // Use a parameterized query
+        whereArgs: [cardDetails.cardNumber] // Pass the parameter as a list
+    );
+    if (exists.isEmpty) {
+      await db.insert('CardData', cardDetails.toJson());
+    }
+
+  }
+
+  static Future<SecretKey> getKey(int id) async{
+    var data = await db.query("EncryptionKeys", columns: ['KeyValue'], where:'KeyID = $id');
+    var text = data[0].remove('KeyValue').toString();
+    List<int> keyData = text.split(',').map(int.parse).toList();
+    return SecretKeyData(keyData);
+
+  }
+
   static Future updateKeys() async{
     SecretKey key1 = await algorithm.newSecretKey();
     var keybytes1 = await key1.extractBytes();
@@ -75,11 +98,11 @@ class DatabaseManager {
   static Future _onCreate(Database db, int version) async {
     await db.execute('''
       CREATE TABLE "CardData" (
-	      "CardNum"	INTEGER,
-	      "ExpiryDate"	TEXT,
-	      "CardHolderName"	TEXT,
-	      "CVV"	INTEGER,
-	      PRIMARY KEY("CardNum")
+	      "cardNumber"	TEXT,
+	      "expiryDate"	TEXT,
+	      "cardHolderName"	TEXT,
+	      "cvvCode"	INTEGER,
+	      PRIMARY KEY("cardNumber")
       )
     ''');
     await db.execute('''
