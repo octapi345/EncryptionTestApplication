@@ -31,6 +31,7 @@ dependencies:
   flutter:
     sdk: flutter
   cryptography: ^2.7.0
+  sqflite: any
   cryptography_flutter: ^2.3.2
 
 
