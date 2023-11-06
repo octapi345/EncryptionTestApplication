@@ -3,6 +3,8 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+import 'dart:async';
+
 
 Future main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -18,16 +20,39 @@ Future main() async {
   sqfliteFfiInit();
   databaseFactory = databaseFactoryFfi;
   DatabaseManager.init();
+  Timer.periodic(Duration(minutes: 60), (Timer t) {
+    DatabaseManager.updateKeys();
+  });
   runApp(MyApp());
 }
 
 class DatabaseManager {
 
+  static late Database db;
+  static final algorithm = AesCtr.with256bits(macAlgorithm: MacAlgorithm.empty);
   static Future<void> init() async{
-    var db = await openDatabase('EncryptedData.db', version: 1, onCreate: _onCreate);
+    db = await openDatabase('EncryptedData.db', version: 1, onCreate: _onCreate);
     /*
     await db.execute("INSERT INTO CardData VALUES (123456789, '11/11/2026', 'Dillon Horton', 123)");*/
     print(db.path);
+
+  }
+  static Future updateKeys() async{
+    SecretKey key1 = await algorithm.newSecretKey();
+    var keybytes1 = await key1.extractBytes();
+    SecretKey key2 = await algorithm.newSecretKey();
+    var keybytes2 = await key2.extractBytes();
+    await db.execute('''
+    UPDATE EncryptionKeys
+    SET KeyValue = '$keybytes1'
+    WHERE KeyID = 1 
+    ''');
+    await db.execute('''
+    UPDATE EncryptionKeys
+    SET KeyValue = '$keybytes2'
+    WHERE KeyID = 2 
+    ''');
+
   }
   static Future _onCreate(Database db, int version) async {
     await db.execute('''
@@ -45,6 +70,19 @@ class DatabaseManager {
 	      "KeyValue"	BLOB,
 	      PRIMARY KEY("KeyID" AUTOINCREMENT)
       )
+    ''');
+    SecretKey key1 = await algorithm.newSecretKey();
+    var keybytes1 = await key1.extractBytes();
+    SecretKey key2 = await algorithm.newSecretKey();
+    var keybytes2 = await key2.extractBytes();
+    print(keybytes1);
+    await db.execute('''
+    INSERT INTO EncryptionKeys (KeyValue)
+    Values ('$keybytes1')
+    ''');
+    await db.execute('''
+    INSERT INTO EncryptionKeys (KeyValue)
+    Values ('$keybytes2')
     ''');
   }
 }
