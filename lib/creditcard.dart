@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_credit_card/flutter_credit_card.dart';
@@ -8,6 +9,8 @@ class MySample extends StatefulWidget {
   @override
   State<StatefulWidget> createState() => MySampleState();
 }
+
+final userReference = FirebaseFirestore.instance.collection('users');
 
 class MySampleState extends State<MySample> {
   bool isLightTheme = true;

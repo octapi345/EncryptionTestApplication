@@ -80,9 +80,7 @@ class MyHomePage extends StatefulWidget {
 class _MyHomePageState extends State<MyHomePage> {
   void _incrementCounter() async {
     UserCredential anonUser = await FirebaseAuth.instance.signInAnonymously();
-    print(anonUser.user!.uid);
-    print(FirebaseAuth.instance.currentUser!.uid);
-    userReference.add(card1.toJson());
+    userReference.doc(FirebaseAuth.instance.currentUser!.uid);
     setState(() {});
   }
 
