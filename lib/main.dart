@@ -1,4 +1,7 @@
+import 'dart:convert';
+
 import 'package:cryptography/cryptography.dart';
+import 'package:encryptiontestapplication/CreditCardDetails.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -18,11 +21,22 @@ Future main() async {
   runApp(MyApp());
 }
 
+CreditCardDetails card1 =
+    CreditCardDetails('0000-0000-0000-0000', '00-00-0000', 'Reginald Appiah', '123');
+
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
   // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
+    final card1JSON = jsonEncode(card1);
+    print(card1JSON);
+
+    final cardMap = jsonDecode(card1JSON) as Map<String, dynamic>;
+    final card = CreditCardDetails.fromJson(cardMap);
+
+    print(card.cardNumber);
+
     return MaterialApp(
       title: 'Flutter Demo',
       theme: ThemeData(
@@ -57,6 +71,7 @@ class _MyHomePageState extends State<MyHomePage> {
   void _incrementCounter() {
     setState(() {
       _counter++;
+      FirebaseAuth.instance.signInAnonymously();
     });
   }
 
