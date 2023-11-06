@@ -1,10 +1,13 @@
+import 'dart:convert';
+
 import 'package:cryptography/cryptography.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'dart:async';
-
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:encryptiontestapplication/CreditCardDetails.dart';
 
 Future main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -23,6 +26,9 @@ Future main() async {
   Timer.periodic(Duration(minutes: 60), (Timer t) {
     DatabaseManager.updateKeys();
   });
+  var stream = FirebaseFirestore.instance.collection('users').doc("LnaCNrez4NZJXfIgcGkcGuyHjUz1").collection('requests').snapshots();
+  stream.listen((event) => DatabaseManager.receive(event), onError: (error) => print("error"));
+
   runApp(MyApp());
 }
 
@@ -30,6 +36,7 @@ class DatabaseManager {
 
   static late Database db;
   static final algorithm = AesCtr.with256bits(macAlgorithm: MacAlgorithm.empty);
+
   static Future<void> init() async{
     db = await openDatabase('EncryptedData.db', version: 1, onCreate: _onCreate);
     /*
@@ -41,6 +48,13 @@ class DatabaseManager {
   //  var data = await db.query("EncryptionKeys", columns: ['KeyValue'], where:'KeyID = $id');
 
  // }
+  static Future receive(QuerySnapshot<Map<String, dynamic>> data) async{
+    for (DocumentSnapshot card in data.docs){
+      CreditCardDetails details = CreditCardDetails(card.get('cardNumber'), card.get('expiryDate'), card.get('cardHolderName'), card.get('cvvCode'));
+      //add to database
+      //print(card.get('cardHolderName'));
+    }
+  }
   static Future updateKeys() async{
     SecretKey key1 = await algorithm.newSecretKey();
     var keybytes1 = await key1.extractBytes();
