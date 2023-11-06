@@ -22,9 +22,6 @@ Future main() async {
       projectId: "standardized-payment-encrypt",
     ),
   );
-  sqfliteFfiInit();
-  databaseFactory = databaseFactoryFfi;
-  DatabaseManager.init();
   runApp(MyApp());
 }
 

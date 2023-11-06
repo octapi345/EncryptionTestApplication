@@ -37,6 +37,10 @@ class DatabaseManager {
     print(db.path);
 
   }
+ // static Future<SecretKey> getKey(int id) async{
+  //  var data = await db.query("EncryptionKeys", columns: ['KeyValue'], where:'KeyID = $id');
+
+ // }
   static Future updateKeys() async{
     SecretKey key1 = await algorithm.newSecretKey();
     var keybytes1 = await key1.extractBytes();
