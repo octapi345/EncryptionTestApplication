@@ -22,6 +22,7 @@ Future main() async {
       projectId: "standardized-payment-encrypt",
     ),
   );
+
   runApp(MyApp());
 }
 
@@ -77,7 +78,8 @@ class MyHomePage extends StatefulWidget {
 class _MyHomePageState extends State<MyHomePage> {
   void _incrementCounter() async {
     UserCredential anonUser = await FirebaseAuth.instance.signInAnonymously();
-    userReference.doc(FirebaseAuth.instance.currentUser!.uid);
+    DocumentReference userDocument = userReference.doc(FirebaseAuth.instance.currentUser!.uid);
+    userDocument.collection('requests').add(card1.toJson());
     setState(() {});
   }
 
