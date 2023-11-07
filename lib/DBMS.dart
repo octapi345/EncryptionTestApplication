@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:cryptography/cryptography.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -54,8 +55,14 @@ class DatabaseManager {
       } on Exception catch(e){
         print("$e");
       }
+      var key = await getKey(1);
+      List<int> bytes = await key.extractBytes();
+      SecretBox box = await algorithm.encrypt(bytes, secretKey: key);
+      print (box);
+      print(box.concatenation());
+      //SecretBox.fromConcatenation(bo, nonceLength: 16, macLength: 0)
       //add to database
-      //print(card.get('cardHolderName'));
+      print(card.get('cardHolderName'));
     }
   }
 
@@ -71,11 +78,12 @@ class DatabaseManager {
   }
 
   static Future<SecretKey> getKey(int id) async{
-    var data = await db.query("EncryptionKeys", columns: ['KeyValue'], where:'KeyID = $id');
-    var text = data[0].remove('KeyValue').toString();
+    var data = await db.query("EncryptionKeys", columns: ['KeyValue'], where:'KeyID = ?', whereArgs: [id]);
+    var text = data[0]['KeyValue'].toString();
+    text = text.substring(1, text.length - 1);
+    print(text);
     List<int> keyData = text.split(',').map(int.parse).toList();
     return SecretKeyData(keyData);
-
   }
 
   static Future updateKeys() async{
@@ -83,7 +91,11 @@ class DatabaseManager {
     var keybytes1 = await key1.extractBytes();
     SecretKey key2 = await algorithm.newSecretKey();
     var keybytes2 = await key2.extractBytes();
-    await db.execute('''
+    await db.update('EncryptionKeys', {'KeyValue': keybytes1}, where: 'KeyID = ?', whereArgs: [1]);
+    await db.update('EncryptionKeys', {'KeyValue': keybytes2}, where: 'KeyID = ?', whereArgs: [2]);
+
+    //old code
+    /*await db.execute('''
     UPDATE EncryptionKeys
     SET KeyValue = '$keybytes1'
     WHERE KeyID = 1 
@@ -92,7 +104,7 @@ class DatabaseManager {
     UPDATE EncryptionKeys
     SET KeyValue = '$keybytes2'
     WHERE KeyID = 2 
-    ''');
+    ''');*/
 
   }
   static Future _onCreate(Database db, int version) async {
@@ -113,18 +125,22 @@ class DatabaseManager {
       )
     ''');
     SecretKey key1 = await algorithm.newSecretKey();
-    var keybytes1 = await key1.extractBytes();
+    var keybytes1 = Uint8List.fromList( await key1.extractBytes());
     SecretKey key2 = await algorithm.newSecretKey();
-    var keybytes2 = await key2.extractBytes();
+    var keybytes2 = Uint8List.fromList( await key2.extractBytes()) ;
     print(keybytes1);
-    await db.execute('''
+    await db.insert('EncryptionKeys', {'KeyValue': keybytes1});
+    await db.insert('EncryptionKeys', {'KeyValue': keybytes2});
+
+    //old code
+    /*await db.execute('''
     INSERT INTO EncryptionKeys (KeyValue)
     Values ('$keybytes1')
     ''');
     await db.execute('''
     INSERT INTO EncryptionKeys (KeyValue)
     Values ('$keybytes2')
-    ''');
+    ''');*/
   }
 }
 
