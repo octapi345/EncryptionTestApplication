@@ -11,7 +11,12 @@ import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:encryptiontestapplication/CreditCardDetails.dart';
 
+
 Future main() async {
+  /*var transitAlgorithm = Ecdsa.p256(Sha256());
+  var keypair = await transitAlgorithm.newKeyPair();
+  var pubkey = await keypair.extractPublicKey();
+  var prikey = await keypair.extract();*/
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(
     // Replace with actual values
@@ -41,7 +46,6 @@ class DatabaseManager {
 
   static Future<void> init() async{
     masterkey = await passwordToKey.deriveKeyFromPassword(password: strongPassword, nonce: salt);
-
     db = await openDatabase('EncryptedData.db', version: 1, onCreate: _onCreate);
     var stream = FirebaseFirestore.instance.collection('users').doc("LnaCNrez4NZJXfIgcGkcGuyHjUz1").collection('requests').snapshots();
     stream.listen((event) => DatabaseManager.receive(event), onError: (error) => print("error"));
