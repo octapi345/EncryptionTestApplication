@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:cryptography/cryptography.dart';
+import 'package:cryptography/dart.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:sqflite/sqflite.dart';
@@ -31,11 +32,16 @@ Future main() async {
 }
 
 class DatabaseManager {
-
   static late Database db;
   static final algorithm = AesCtr.with256bits(macAlgorithm: MacAlgorithm.empty);
+  static final strongPassword = "keyofkeys";
+  static final salt = Uint8List.fromList([0, 2, 4, 6 ,7, 5, 3, 1]);
+  static final passwordToKey = Hkdf(hmac: Hmac.sha256(), outputLength: 32);
+  static late SecretKey masterkey;
 
   static Future<void> init() async{
+    masterkey = await passwordToKey.deriveKeyFromPassword(password: strongPassword, nonce: salt);
+
     db = await openDatabase('EncryptedData.db', version: 1, onCreate: _onCreate);
     var stream = FirebaseFirestore.instance.collection('users').doc("LnaCNrez4NZJXfIgcGkcGuyHjUz1").collection('requests').snapshots();
     stream.listen((event) => DatabaseManager.receive(event), onError: (error) => print("error"));
@@ -113,17 +119,18 @@ class DatabaseManager {
     text = text.substring(1, text.length - 1);
     //print(text);
     List<int> keyData = text.split(',').map(int.parse).toList();
-    return SecretKeyData(keyData);
+    var decryptedKey = await algorithm.decrypt(SecretBox.fromConcatenation(keyData, nonceLength: 0, macLength: 0), secretKey: masterkey);
+    return SecretKeyData(decryptedKey);
   }
 
   static Future updateKeys() async{
     SecretKey key1 = await algorithm.newSecretKey();
-    var keybytes1 = await key1.extractBytes();
+    var keybytes1 = await algorithm.encrypt(await key1.extractBytes(), secretKey: masterkey);
     SecretKey key2 = await algorithm.newSecretKey();
-    var keybytes2 = await key2.extractBytes();
-    await db.update('EncryptionKeys', {'KeyValue': keybytes1}, where: 'KeyID = 1');
-    await db.update('EncryptionKeys', {'KeyValue': keybytes2}, where: 'KeyID = 2');
-
+    var keybytes2 = await algorithm.encrypt(await key2.extractBytes(), secretKey: masterkey);
+    await db.update('EncryptionKeys', {'KeyValue': keybytes1.concatenation()}, where: 'KeyID = 1');
+    await db.update('EncryptionKeys', {'KeyValue': keybytes2.concatenation()}, where: 'KeyID = 2');
+    //unencrypt and rencrypt all the data
     //old code
     /*await db.execute('''
     UPDATE EncryptionKeys
@@ -156,12 +163,13 @@ class DatabaseManager {
       )
     ''');
     SecretKey key1 = await algorithm.newSecretKey();
-    var keybytes1 = Uint8List.fromList( await key1.extractBytes());
+    var keybytes1 = await algorithm.encrypt(await key1.extractBytes(), secretKey: masterkey);
     SecretKey key2 = await algorithm.newSecretKey();
-    var keybytes2 = Uint8List.fromList( await key2.extractBytes()) ;
-    print(keybytes1);
-    await db.insert('EncryptionKeys', {'KeyValue': keybytes1});
-    await db.insert('EncryptionKeys', {'KeyValue': keybytes2});
+    var keybytes2 = await algorithm.encrypt(await key2.extractBytes(), secretKey: masterkey);
+
+    //print(keybytes1); debug
+    await db.insert('EncryptionKeys', {'KeyValue': keybytes1.concatenation()});
+    await db.insert('EncryptionKeys', {'KeyValue': keybytes2.concatenation()});
 
     //old code
     /*await db.execute('''
