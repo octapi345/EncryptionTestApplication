@@ -1,8 +1,12 @@
+import 'dart:typed_data';
+import 'dart:convert';
+
 class CreditCardDetails {
-  final String cardNumber;
-  final String expiryDate;
-  final String cardHolderName;
-  final String cvvCode;
+  final dynamic cardNumber;
+  final dynamic expiryDate;
+  final dynamic cardHolderName;
+  final dynamic cvvCode;
+
 
   CreditCardDetails(this.cardNumber, this.expiryDate, this.cardHolderName, this.cvvCode);
 
@@ -18,4 +22,12 @@ class CreditCardDetails {
         'cardHolderName': cardHolderName,
         'cvvCode': cvvCode
       };
+  Map<String, dynamic> toJsonDB(String id) => {
+    'submissionID': id,
+    'cardNumber': cardNumber,
+    'expiryDate': expiryDate,
+    'cardHolderName': cardHolderName,
+    'cvvCode': cvvCode
+  };
+
 }
