@@ -206,17 +206,31 @@ class DatabaseManager {
   }
 }
 
+CreditCardDetails card1 =
+    CreditCardDetails('0000-0000-0000-0000', '00-00-0000', 'Reginald Appiah', '123');
+
+final userReference = FirebaseFirestore.instance.collection('users');
+
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
   // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
+    final card1JSON = jsonEncode(card1);
+    print(card1JSON);
+
+    final cardMap = jsonDecode(card1JSON) as Map<String, dynamic>;
+    final card = CreditCardDetails.fromJson(cardMap);
+
+    print(card.cardNumber);
     return MaterialApp(
       title: 'Flutter Demo',
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),
-      home: MyHomePage(title: "Standardized Encrypt"),
+      home: const MyHomePage(
+          title:
+              'Standardized Encryption Implementation For Secure Storage of Payment Information'),
     );
   }
 }
