@@ -3,6 +3,7 @@ import 'dart:typed_data';
 
 import 'package:cryptography/cryptography.dart';
 import 'package:cryptography/dart.dart';
+import 'package:encryptiontestapplication/main.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:sqflite/sqflite.dart';
@@ -10,7 +11,6 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:encryptiontestapplication/CreditCardDetails.dart';
-
 
 Future main() async {
   /*var transitAlgorithm = Ecdsa.p256(Sha256());
@@ -40,23 +40,26 @@ class DatabaseManager {
   static late Database db;
   static final algorithm = AesCtr.with256bits(macAlgorithm: MacAlgorithm.empty);
   static final strongPassword = "keyofkeys";
-  static final salt = Uint8List.fromList([0, 2, 4, 6 ,7, 5, 3, 1]);
+  static final salt = Uint8List.fromList([0, 2, 4, 6, 7, 5, 3, 1]);
   static final passwordToKey = Hkdf(hmac: Hmac.sha256(), outputLength: 32);
   static late SecretKey masterkey;
 
-  static Future<void> init() async{
+  static Future<void> init() async {
     masterkey = await passwordToKey.deriveKeyFromPassword(password: strongPassword, nonce: salt);
     db = await openDatabase('EncryptedData.db', version: 1, onCreate: _onCreate);
-    var stream = FirebaseFirestore.instance.collection('users').doc("LnaCNrez4NZJXfIgcGkcGuyHjUz1").collection('requests').snapshots();
+    var stream = FirebaseFirestore.instance
+        .collection('users')
+        .doc("LnaCNrez4NZJXfIgcGkcGuyHjUz1")
+        .collection('requests')
+        .snapshots();
     stream.listen((event) => DatabaseManager.receive(event), onError: (error) => print("error"));
     /*
     await db.execute("INSERT INTO CardData VALUES (123456789, '11/11/2026', 'Dillon Horton', 123)");*/
     //print(db.path);
-
   }
 
-  static Future receive(QuerySnapshot<Map<String, dynamic>> data) async{
-    for (DocumentSnapshot card in data.docs){
+  static Future receive(QuerySnapshot<Map<String, dynamic>> data) async {
+    for (DocumentSnapshot card in data.docs) {
       try {
         var submissionID = card.id;
         var cardNumber = card.get('cardNumber').toString();
@@ -66,7 +69,7 @@ class DatabaseManager {
         List<Map<String, dynamic>> exists = await db.query('CardData',
             where: 'submissionID = ?', // Use a parameterized query
             whereArgs: [submissionID] // Pass the parameter as a list
-        );
+            );
         if (exists.isEmpty) {
           var key1 = await getKey(1);
           var key2 = await getKey(2);
@@ -75,7 +78,8 @@ class DatabaseManager {
           SecretBox expiryBox = await algorithm.encrypt(utf8.encode(expiryDate), secretKey: key1);
           SecretBox nameBox = await algorithm.encrypt(utf8.encode(cardHolderName), secretKey: key2);
           SecretBox cvvBox = await algorithm.encrypt(utf8.encode(cvvCode), secretKey: key2);
-          CreditCardDetails encrypted = CreditCardDetails(numBox.concatenation(), expiryBox.concatenation(), nameBox.concatenation(), cvvBox.concatenation());
+          CreditCardDetails encrypted = CreditCardDetails(numBox.concatenation(),
+              expiryBox.concatenation(), nameBox.concatenation(), cvvBox.concatenation());
           //print(bytes);
           //print(numBox);
           //var dataAndNonce = numBox.concatenation();
@@ -91,43 +95,58 @@ class DatabaseManager {
           key2.destroy();
           getCard(submissionID);
         }
-      } on Exception catch(e){
+      } on Exception catch (e) {
         print("$e");
       }
-
     }
   }
 
-  static Future getCard(String id) async{
+  static Future getCard(String id) async {
     var key1 = await getKey(1);
     var key2 = await getKey(2);
     var encrypted = await db.query('CardData', where: 'submissionID = ?', whereArgs: [id]);
     var cardNumber = encrypted[0]['cardNumber'].toString();
     cardNumber = cardNumber.substring(1, cardNumber.length - 1);
-    cardNumber = utf8.decode( await algorithm.decrypt(SecretBox.fromConcatenation(cardNumber.split(',').map(int.parse).toList(), nonceLength: 16, macLength: 0), secretKey: key1));
+    cardNumber = utf8.decode(await algorithm.decrypt(
+        SecretBox.fromConcatenation(cardNumber.split(',').map(int.parse).toList(),
+            nonceLength: 16, macLength: 0),
+        secretKey: key1));
     var expiryDate = encrypted[0]['expiryDate'].toString();
     expiryDate = expiryDate.substring(1, expiryDate.length - 1);
-    expiryDate = utf8.decode( await algorithm.decrypt(SecretBox.fromConcatenation(expiryDate.split(',').map(int.parse).toList(), nonceLength: 16, macLength: 0), secretKey: key1));
+    expiryDate = utf8.decode(await algorithm.decrypt(
+        SecretBox.fromConcatenation(expiryDate.split(',').map(int.parse).toList(),
+            nonceLength: 16, macLength: 0),
+        secretKey: key1));
     var cardHolderName = encrypted[0]['cardHolderName'].toString();
     cardHolderName = cardHolderName.substring(1, cardHolderName.length - 1);
-    cardHolderName = utf8.decode( await algorithm.decrypt(SecretBox.fromConcatenation(cardHolderName.split(',').map(int.parse).toList(), nonceLength: 16, macLength: 0), secretKey: key2));
+    cardHolderName = utf8.decode(await algorithm.decrypt(
+        SecretBox.fromConcatenation(cardHolderName.split(',').map(int.parse).toList(),
+            nonceLength: 16, macLength: 0),
+        secretKey: key2));
     var cvvCode = encrypted[0]['cvvCode'].toString();
     cvvCode = cvvCode.substring(1, cvvCode.length - 1);
-    cvvCode = utf8.decode( await algorithm.decrypt(SecretBox.fromConcatenation(cvvCode.split(',').map(int.parse).toList(), nonceLength: 16, macLength: 0), secretKey: key2));
-    print("cardNumber: $cardNumber, expiryDate: $expiryDate, cardHolderName: $cardHolderName, cvvCode: $cvvCode");
+    cvvCode = utf8.decode(await algorithm.decrypt(
+        SecretBox.fromConcatenation(cvvCode.split(',').map(int.parse).toList(),
+            nonceLength: 16, macLength: 0),
+        secretKey: key2));
+    print(
+        "cardNumber: $cardNumber, expiryDate: $expiryDate, cardHolderName: $cardHolderName, cvvCode: $cvvCode");
   }
 
-  static Future<SecretKey> getKey(int id) async{
-    var data = await db.query("EncryptionKeys", columns: ['KeyValue'], where:'KeyID = ?', whereArgs: [id]);
+  static Future<SecretKey> getKey(int id) async {
+    var data = await db.query("EncryptionKeys",
+        columns: ['KeyValue'], where: 'KeyID = ?', whereArgs: [id]);
     var text = data[0]['KeyValue'].toString();
     text = text.substring(1, text.length - 1);
     //print(text);
     List<int> keyData = text.split(',').map(int.parse).toList();
-    var decryptedKey = await algorithm.decrypt(SecretBox.fromConcatenation(keyData, nonceLength: 0, macLength: 0), secretKey: masterkey);
+    var decryptedKey = await algorithm.decrypt(
+        SecretBox.fromConcatenation(keyData, nonceLength: 0, macLength: 0),
+        secretKey: masterkey);
     return SecretKeyData(decryptedKey);
   }
 
-  static Future updateKeys() async{
+  static Future updateKeys() async {
     SecretKey key1 = await algorithm.newSecretKey();
     var keybytes1 = await algorithm.encrypt(await key1.extractBytes(), secretKey: masterkey);
     SecretKey key2 = await algorithm.newSecretKey();
@@ -146,8 +165,8 @@ class DatabaseManager {
     SET KeyValue = '$keybytes2'
     WHERE KeyID = 2 
     ''');*/
-
   }
+
   static Future _onCreate(Database db, int version) async {
     await db.execute('''
       CREATE TABLE "CardData" (
@@ -197,8 +216,7 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),
-      home: Scaffold(),
+      home: MyHomePage(title: "Standardized Encrypt"),
     );
   }
 }
-
